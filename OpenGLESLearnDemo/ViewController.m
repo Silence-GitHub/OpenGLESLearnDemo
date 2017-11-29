@@ -12,6 +12,7 @@
 
 @property (nonatomic, strong) EAGLContext *context;
 @property (nonatomic, assign) GLuint shaderProgram;
+@property (nonatomic, assign) GLfloat elapsedTime;
 
 @end
 
@@ -123,7 +124,7 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
 }
 
 - (void)update {
-    
+    self.elapsedTime += self.timeSinceLastUpdate;
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
@@ -131,6 +132,10 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     glClear(GL_COLOR_BUFFER_BIT);
     
     glUseProgram(self.shaderProgram);
+    
+    GLint time = glGetUniformLocation(self.shaderProgram, "elapsedTime");
+    glUniform1f(time, self.elapsedTime);
+    
     [self drawTriangle];
 }
 
