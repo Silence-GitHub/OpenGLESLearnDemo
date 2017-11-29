@@ -10,20 +10,31 @@
 
 @interface ViewController ()
 
+@property (nonatomic, strong) EAGLContext *context;
+
 @end
 
 @implementation ViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // Do any additional setup after loading the view, typically from a nib.
+    
+    _context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
+    
+    GLKView *view = (GLKView *)self.view;
+    view.delegate = self;
+    view.context = _context;
+    
+    [EAGLContext setCurrentContext:_context];
 }
 
-
-- (void)didReceiveMemoryWarning {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+- (void)update {
+    
 }
 
+- (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
+    glClearColor(0.8, 0.8, 0.8, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
 
 @end
