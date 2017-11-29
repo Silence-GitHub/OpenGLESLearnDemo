@@ -15,6 +15,8 @@
 		4A7175E71FCD51A20016D839 /* OpenGLESLearnDemoTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 4A7175E61FCD51A20016D839 /* OpenGLESLearnDemoTests.m */; };
 		4A7175F21FCD51A20016D839 /* OpenGLESLearnDemoUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 4A7175F11FCD51A20016D839 /* OpenGLESLearnDemoUITests.m */; };
 		4A7176031FCE4ED40016D839 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4A7176011FCE4ED40016D839 /* Main.storyboard */; };
+		4A7176081FCE54B00016D839 /* fragment.glsl in Resources */ = {isa = PBXBuildFile; fileRef = 4A7176071FCE54B00016D839 /* fragment.glsl */; };
+		4A71760A1FCE55920016D839 /* vertex.glsl in Resources */ = {isa = PBXBuildFile; fileRef = 4A7176091FCE55920016D839 /* vertex.glsl */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +53,8 @@
 		4A7175F11FCD51A20016D839 /* OpenGLESLearnDemoUITests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OpenGLESLearnDemoUITests.m; sourceTree = "<group>"; };
 		4A7175F31FCD51A20016D839 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4A7176021FCE4ED40016D839 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		4A7176071FCE54B00016D839 /* fragment.glsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = fragment.glsl; sourceTree = "<group>"; };
+		4A7176091FCE55920016D839 /* vertex.glsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vertex.glsl; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +105,8 @@
 		4A7175CC1FCD51A10016D839 /* OpenGLESLearnDemo */ = {
 			isa = PBXGroup;
 			children = (
+				4A7176091FCE55920016D839 /* vertex.glsl */,
+				4A7176071FCE54B00016D839 /* fragment.glsl */,
 				4A7175CD1FCD51A10016D839 /* AppDelegate.h */,
 				4A7175CE1FCD51A10016D839 /* AppDelegate.m */,
 				4A7175D01FCD51A10016D839 /* ViewController.h */,
@@ -238,9 +244,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4A7176081FCE54B00016D839 /* fragment.glsl in Resources */,
 				4A7176031FCE4ED40016D839 /* Main.storyboard in Resources */,
 				4A7175DA1FCD51A10016D839 /* LaunchScreen.storyboard in Resources */,
 				4A7175D71FCD51A10016D839 /* Assets.xcassets in Resources */,
+				4A71760A1FCE55920016D839 /* vertex.glsl in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
