@@ -13,6 +13,7 @@
 @property (nonatomic, strong) EAGLContext *context;
 @property (nonatomic, assign) GLuint shaderProgram;
 @property (nonatomic, assign) GLfloat elapsedTime;
+@property (nonatomic, assign) GLKMatrix4 transformMatrix;
 
 @end
 
@@ -33,6 +34,9 @@
     view.context = _context;
     
     [EAGLContext setCurrentContext:_context];
+    
+    _elapsedTime = 0;
+    _transformMatrix = GLKMatrix4Identity;
 }
 
 - (void)setupShader {
@@ -125,6 +129,13 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
 
 - (void)update {
     self.elapsedTime += self.timeSinceLastUpdate;
+    
+    float varyingFactor = sinf(self.elapsedTime);
+    GLKMatrix4 scaleMatrix = GLKMatrix4MakeScale(varyingFactor, varyingFactor, 1);
+    GLKMatrix4 rotateMatrix = GLKMatrix4MakeRotation(varyingFactor, 0, 0, 1);
+    GLKMatrix4 translateMatrix = GLKMatrix4MakeTranslation(varyingFactor, 0, 0);
+    self.transformMatrix = GLKMatrix4Multiply(translateMatrix, rotateMatrix);
+    self.transformMatrix = GLKMatrix4Multiply(self.transformMatrix, scaleMatrix);
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
@@ -136,7 +147,10 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     GLint time = glGetUniformLocation(self.shaderProgram, "elapsedTime");
     glUniform1f(time, self.elapsedTime);
     
-    [self drawPoints];
+    GLint transform = glGetUniformLocation(self.shaderProgram, "transform");
+    glUniformMatrix4fv(transform, 1, 0, self.transformMatrix.m);
+    
+    [self drawTriangle];
 }
 
 - (void)bindAttribs:(GLfloat *)triangleData {
@@ -162,82 +176,6 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     
     [self bindAttribs:vertexData];
     glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
-}
-
-- (void)drawTriangleStrip {
-    // 相邻三角形共享一条边
-    static GLfloat vertexData[] = {
-        +0.0, +0.5, +0.0, +1.0, +0.0, +0.0,
-        -0.5, +0.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, +0.0, +0.0, +0.0, +0.0, +1.0,
-        +0.0, -0.5, +0.0, +1.0, +0.0, +0.0,
-    };
-    
-    [self bindAttribs:vertexData];
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
-}
-
-- (void)drawTriangleFan {
-    // 相邻三角形共享一条边，所有三角形共享一个顶点
-    static GLfloat vertexData[] = {
-        -0.5, +0.0, +0.0, +0.0, +1.0, +0.0,
-        +0.0, +0.5, +0.0, +1.0, +0.0, +0.0,
-        +0.5, +0.0, +0.0, +0.0, +0.0, +1.0,
-        +0.0, -0.5, +0.0, +1.0, +0.0, +0.0,
-    };
-    
-    [self bindAttribs:vertexData];
-    glDrawArrays(GL_TRIANGLE_FAN, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
-}
-
-- (void)drawLines {
-    static GLfloat vertexData[] = {
-        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
-        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, -0.5, +0.0, +1.0, +0.0, +0.0,
-    };
-    
-    [self bindAttribs:vertexData];
-    glLineWidth(5);
-    glDrawArrays(GL_LINES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
-}
-
-- (void)drawLinesStrip {
-    // 相邻线段共享一个顶点
-    static GLfloat vertexData[] = {
-        +0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
-        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, -0.5, +0.0, +1.0, +0.0, +0.0,
-    };
-    
-    [self bindAttribs:vertexData];
-    glLineWidth(5);
-    glDrawArrays(GL_LINE_STRIP, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
-}
-
-- (void)drawLinesLoop {
-    // 相邻线段共享一个顶点，开始点和终结点连接形成封闭的形状
-    static GLfloat vertexData[] = {
-        +0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
-        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, -0.5, +0.0, +1.0, +0.0, +0.0,
-    };
-    
-    [self bindAttribs:vertexData];
-    glLineWidth(5);
-    glDrawArrays(GL_LINE_LOOP, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
-}
-
-- (void)drawPoints {
-    static GLfloat vertexData[] = {
-        +0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
-        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, -0.5, +0.0, +1.0, +0.0, +0.0,
-    };
-    
-    [self bindAttribs:vertexData];
-    glDrawArrays(GL_POINTS, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
 }
 
 @end

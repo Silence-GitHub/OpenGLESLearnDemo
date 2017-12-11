@@ -4,9 +4,9 @@ attribute vec4 color;
 varying vec4 fragColor;
 
 uniform float elapsedTime;
+uniform mat4 transform;
 
 void main(void) {
     fragColor = color;
-    gl_Position = position;
-    gl_PointSize = 25.0; // 必须写小数点
+    gl_Position = transform * position;
 }
