@@ -15,8 +15,7 @@
 @property (nonatomic, assign) GLfloat elapsedTime;
 @property (nonatomic, assign) GLKMatrix4 projectionMatrix;
 @property (nonatomic, assign) GLKMatrix4 cameraMatrix;
-@property (nonatomic, assign) GLKMatrix4 modelMatrix1;
-@property (nonatomic, assign) GLKMatrix4 modelMatrix2;
+@property (nonatomic, assign) GLKMatrix4 modelMatrix;
 
 @end
 
@@ -33,10 +32,14 @@
     _context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
     
     GLKView *view = (GLKView *)self.view;
+    view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
+    view.drawableMultisample = GLKViewDrawableMultisample4X;
     view.delegate = self;
     view.context = _context;
     
     [EAGLContext setCurrentContext:_context];
+    
+    glEnable(GL_DEPTH_TEST);
     
     _elapsedTime = 0;
     
@@ -45,8 +48,7 @@
     
     _cameraMatrix = GLKMatrix4MakeLookAt(0, 0, 2, 0, 0, 0, 0, 1, 0);
     
-    _modelMatrix1 = GLKMatrix4Identity;
-    _modelMatrix2 = GLKMatrix4Identity;
+    _modelMatrix = GLKMatrix4Identity;
 }
 
 - (void)setupShader {
@@ -143,18 +145,12 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     float varyingFactor = (sinf(self.elapsedTime) + 1) / 2.0;
     self.cameraMatrix = GLKMatrix4MakeLookAt(0, 0, 2 * (varyingFactor + 1), 0, 0, 0, 0, 1, 0);
     
-    GLKMatrix4 translateMatrix1 = GLKMatrix4MakeTranslation(-0.7, 0, 0);
-    GLKMatrix4 rotateMatrix1 = GLKMatrix4MakeRotation(varyingFactor * M_PI * 2, 0, 1, 0);
-    self.modelMatrix1 = GLKMatrix4Multiply(translateMatrix1, rotateMatrix1);
-    
-    GLKMatrix4 translateMatrix2 = GLKMatrix4MakeTranslation(0.7, 0, 0);
-    GLKMatrix4 rotateMatrix2 = GLKMatrix4MakeRotation(varyingFactor * M_PI, 0, 0, 1);
-    self.modelMatrix2 = GLKMatrix4Multiply(translateMatrix2, rotateMatrix2);
+    self.modelMatrix = GLKMatrix4MakeRotation(varyingFactor * M_PI * 2, 1, 1, 1);
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
     glClearColor(0.8, 0.8, 0.8, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     glUseProgram(self.shaderProgram);
     
@@ -169,10 +165,7 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     
     GLint model = glGetUniformLocation(self.shaderProgram, "modelMatrix");
     
-    glUniformMatrix4fv(model, 1, 0, self.modelMatrix1.m);
-    [self drawTriangle];
-    
-    glUniformMatrix4fv(model, 1, 0, self.modelMatrix2.m);
+    glUniformMatrix4fv(model, 1, 0, self.modelMatrix.m);
     [self drawTriangle];
 }
 
@@ -189,12 +182,21 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
 
 - (void)drawTriangle {
     static GLfloat vertexData[] = {
-        -0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
-        -0.5, -0.5, +0.0, +0.0, +1.0, +0.0,
-        +0.5, -0.5, +0.0, +0.0, +0.0, +1.0,
-        +0.5, -0.5, +0.0, +0.0, +0.0, +1.0,
-        +0.5, +0.5, +0.0, +0.0, +1.0, +0.0,
-        -0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
+        +0.00, +0.00, +0.50, +1.0, +0.0, +0.0, // D
+        -0.47, +0.00, -0.17, +1.0, +0.0, +0.0, // A
+        +0.24, +0.41, -0.17, +1.0, +0.0, +0.0, // B
+        
+        +0.00, +0.00, +0.50, +0.0, +1.0, +0.0, // D
+        +0.24, +0.41, -0.17, +0.0, +1.0, +0.0, // B
+        +0.24, -0.41, -0.17, +0.0, +1.0, +0.0, // C
+        
+        +0.00, +0.00, +0.50, +0.0, +0.0, +1.0, // D
+        -0.47, +0.00, -0.17, +0.0, +0.0, +1.0, // A
+        +0.24, -0.41, -0.17, +0.0, +0.0, +1.0, // C
+        
+        -0.47, +0.00, -0.17, +0.5, +0.5, +0.5, // A
+        +0.24, +0.41, -0.17, +0.5, +0.5, +0.5, // B
+        +0.24, -0.41, -0.17, +0.5, +0.5, +0.5, // C
     };
     
     [self bindAttribs:vertexData];
