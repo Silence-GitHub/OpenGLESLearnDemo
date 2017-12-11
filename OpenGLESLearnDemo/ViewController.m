@@ -16,6 +16,7 @@
 @property (nonatomic, assign) GLKMatrix4 projectionMatrix;
 @property (nonatomic, assign) GLKMatrix4 cameraMatrix;
 @property (nonatomic, assign) GLKMatrix4 modelMatrix;
+@property (nonatomic, assign) GLKVector3 lightDirection;
 
 @end
 
@@ -49,6 +50,8 @@
     _cameraMatrix = GLKMatrix4MakeLookAt(0, 0, 2, 0, 0, 0, 0, 1, 0);
     
     _modelMatrix = GLKMatrix4Identity;
+    
+    _lightDirection = GLKVector3Make(0, -1, 0);
 }
 
 - (void)setupShader {
@@ -145,7 +148,7 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     float varyingFactor = (sinf(self.elapsedTime) + 1) / 2.0;
     self.cameraMatrix = GLKMatrix4MakeLookAt(0, 0, 2 * (varyingFactor + 1), 0, 0, 0, 0, 1, 0);
     
-    self.modelMatrix = GLKMatrix4MakeRotation(varyingFactor * M_PI * 2, 1, 1, 1);
+    self.modelMatrix = GLKMatrix4MakeRotation(varyingFactor * M_PI * 2, 1, 1, 0);
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
@@ -164,8 +167,18 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     glUniformMatrix4fv(camera, 1, 0, self.cameraMatrix.m);
     
     GLint model = glGetUniformLocation(self.shaderProgram, "modelMatrix");
-    
     glUniformMatrix4fv(model, 1, 0, self.modelMatrix.m);
+    
+    bool canInvert;
+    GLKMatrix4 normalMatrix = GLKMatrix4InvertAndTranspose(self.modelMatrix, &canInvert);
+    if (canInvert) {
+        GLint normal = glGetUniformLocation(self.shaderProgram, "normalMatrix");
+        glUniformMatrix4fv(normal, 1, 0, normalMatrix.m);
+    }
+    
+    GLint light = glGetUniformLocation(self.shaderProgram, "lightDirection");
+    glUniform3fv(light, 1, self.lightDirection.v);
+    
     [self drawRectangle];
 }
 
@@ -173,7 +186,7 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     GLint position = glGetAttribLocation(self.shaderProgram, "position");
     glEnableVertexAttribArray(position);
     
-    GLint color = glGetAttribLocation(self.shaderProgram, "color");
+    GLint color = glGetAttribLocation(self.shaderProgram, "normal");
     glEnableVertexAttribArray(color);
     
     glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char *)triangleData);
@@ -196,13 +209,13 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
         +0.5, +0.5, -0.5, +1.0, +0.0, +0.0,
         +0.5, -0.5, +0.5, +1.0, +0.0, +0.0,
         
-        -0.5, +0.5, +0.5, +1.0, +0.0, +0.0,
-        -0.5, +0.5, -0.5, +1.0, +0.0, +0.0,
-        -0.5, -0.5, +0.5, +1.0, +0.0, +0.0,
+        -0.5, +0.5, +0.5, -1.0, +0.0, +0.0,
+        -0.5, +0.5, -0.5, -1.0, +0.0, +0.0,
+        -0.5, -0.5, +0.5, -1.0, +0.0, +0.0,
         
-        -0.5, -0.5, -0.5, +1.0, +0.0, +0.0,
-        -0.5, +0.5, -0.5, +1.0, +0.0, +0.0,
-        -0.5, -0.5, +0.5, +1.0, +0.0, +0.0,
+        -0.5, -0.5, -0.5, -1.0, +0.0, +0.0,
+        -0.5, +0.5, -0.5, -1.0, +0.0, +0.0,
+        -0.5, -0.5, +0.5, -1.0, +0.0, +0.0,
     };
     
     [self bindAttribs:vertexData];
@@ -219,13 +232,13 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
         +0.5, +0.5, -0.5, +0.0, +1.0, +0.0,
         -0.5, +0.5, +0.5, +0.0, +1.0, +0.0,
         
-        +0.5, -0.5, +0.5, +0.0, +1.0, +0.0,
-        +0.5, -0.5, -0.5, +0.0, +1.0, +0.0,
-        -0.5, -0.5, +0.5, +0.0, +1.0, +0.0,
+        +0.5, -0.5, +0.5, +0.0, -1.0, +0.0,
+        +0.5, -0.5, -0.5, +0.0, -1.0, +0.0,
+        -0.5, -0.5, +0.5, +0.0, -1.0, +0.0,
         
-        -0.5, -0.5, -0.5, +0.0, +1.0, +0.0,
-        +0.5, -0.5, -0.5, +0.0, +1.0, +0.0,
-        -0.5, -0.5, +0.5, +0.0, +1.0, +0.0,
+        -0.5, -0.5, -0.5, +0.0, -1.0, +0.0,
+        +0.5, -0.5, -0.5, +0.0, -1.0, +0.0,
+        -0.5, -0.5, +0.5, +0.0, -1.0, +0.0,
     };
     
     [self bindAttribs:vertexData];
@@ -242,36 +255,13 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
         +0.5, -0.5, +0.5, +0.0, +0.0, +1.0,
         -0.5, +0.5, +0.5, +0.0, +0.0, +1.0,
         
-        +0.5, +0.5, -0.5, +0.0, +0.0, +1.0,
-        +0.5, -0.5, -0.5, +0.0, +0.0, +1.0,
-        -0.5, +0.5, -0.5, +0.0, +0.0, +1.0,
+        +0.5, +0.5, -0.5, +0.0, +0.0, -1.0,
+        +0.5, -0.5, -0.5, +0.0, +0.0, -1.0,
+        -0.5, +0.5, -0.5, +0.0, +0.0, -1.0,
         
-        -0.5, -0.5, -0.5, +0.0, +0.0, +1.0,
-        +0.5, -0.5, -0.5, +0.0, +0.0, +1.0,
-        -0.5, +0.5, -0.5, +0.0, +0.0, +1.0,
-    };
-    
-    [self bindAttribs:vertexData];
-    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
-}
-
-- (void)drawTriangle {
-    static GLfloat vertexData[] = {
-        +0.00, +0.00, +0.50, +1.0, +0.0, +0.0, // D
-        -0.47, +0.00, -0.17, +1.0, +0.0, +0.0, // A
-        +0.24, +0.41, -0.17, +1.0, +0.0, +0.0, // B
-        
-        +0.00, +0.00, +0.50, +0.0, +1.0, +0.0, // D
-        +0.24, +0.41, -0.17, +0.0, +1.0, +0.0, // B
-        +0.24, -0.41, -0.17, +0.0, +1.0, +0.0, // C
-        
-        +0.00, +0.00, +0.50, +0.0, +0.0, +1.0, // D
-        -0.47, +0.00, -0.17, +0.0, +0.0, +1.0, // A
-        +0.24, -0.41, -0.17, +0.0, +0.0, +1.0, // C
-        
-        -0.47, +0.00, -0.17, +0.5, +0.5, +0.5, // A
-        +0.24, +0.41, -0.17, +0.5, +0.5, +0.5, // B
-        +0.24, -0.41, -0.17, +0.5, +0.5, +0.5, // C
+        -0.5, -0.5, -0.5, +0.0, +0.0, -1.0,
+        +0.5, -0.5, -0.5, +0.0, +0.0, -1.0,
+        -0.5, +0.5, -0.5, +0.0, +0.0, -1.0,
     };
     
     [self bindAttribs:vertexData];
