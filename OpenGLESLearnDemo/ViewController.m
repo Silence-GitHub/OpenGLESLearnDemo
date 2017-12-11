@@ -136,26 +136,108 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     GLint time = glGetUniformLocation(self.shaderProgram, "elapsedTime");
     glUniform1f(time, self.elapsedTime);
     
-    [self drawTriangle];
+    [self drawPoints];
 }
 
-- (void)drawTriangle {
-    static GLfloat vertexData[18] = {
-        +0.0, +0.5, +0.0, +1.0, +0.0, +0.0,
-        -0.5, -0.5, +0.0, +0.0, +1.0, +0.0,
-        +0.5, -0.5, +0.0, +0.0, +0.0, +1.0
-    };
-    
+- (void)bindAttribs:(GLfloat *)triangleData {
     GLint position = glGetAttribLocation(self.shaderProgram, "position");
     glEnableVertexAttribArray(position);
     
     GLint color = glGetAttribLocation(self.shaderProgram, "color");
     glEnableVertexAttribArray(color);
     
-    glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char *)vertexData); // vertexData前必须加上类型转化
-    glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char *)vertexData + 3 * sizeof(GLfloat));
+    glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char *)triangleData);
+    glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char *)triangleData + 3 * sizeof(GLfloat));
+}
+
+- (void)drawTriangle {
+    static GLfloat vertexData[] = {
+        +0.0, +0.5, +0.0, +1.0, +0.0, +0.0,
+        -0.5, +0.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, +0.0, +0.0, +0.0, +0.0, +1.0,
+        +0.0, -0.5, +0.0, +1.0, +0.0, +0.0,
+        -0.5, +0.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, +0.0, +0.0, +0.0, +0.0, +1.0,
+    };
     
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    [self bindAttribs:vertexData];
+    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+}
+
+- (void)drawTriangleStrip {
+    // 相邻三角形共享一条边
+    static GLfloat vertexData[] = {
+        +0.0, +0.5, +0.0, +1.0, +0.0, +0.0,
+        -0.5, +0.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, +0.0, +0.0, +0.0, +0.0, +1.0,
+        +0.0, -0.5, +0.0, +1.0, +0.0, +0.0,
+    };
+    
+    [self bindAttribs:vertexData];
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+}
+
+- (void)drawTriangleFan {
+    // 相邻三角形共享一条边，所有三角形共享一个顶点
+    static GLfloat vertexData[] = {
+        -0.5, +0.0, +0.0, +0.0, +1.0, +0.0,
+        +0.0, +0.5, +0.0, +1.0, +0.0, +0.0,
+        +0.5, +0.0, +0.0, +0.0, +0.0, +1.0,
+        +0.0, -0.5, +0.0, +1.0, +0.0, +0.0,
+    };
+    
+    [self bindAttribs:vertexData];
+    glDrawArrays(GL_TRIANGLE_FAN, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+}
+
+- (void)drawLines {
+    static GLfloat vertexData[] = {
+        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
+        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, -0.5, +0.0, +1.0, +0.0, +0.0,
+    };
+    
+    [self bindAttribs:vertexData];
+    glLineWidth(5);
+    glDrawArrays(GL_LINES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+}
+
+- (void)drawLinesStrip {
+    // 相邻线段共享一个顶点
+    static GLfloat vertexData[] = {
+        +0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
+        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, -0.5, +0.0, +1.0, +0.0, +0.0,
+    };
+    
+    [self bindAttribs:vertexData];
+    glLineWidth(5);
+    glDrawArrays(GL_LINE_STRIP, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+}
+
+- (void)drawLinesLoop {
+    // 相邻线段共享一个顶点，开始点和终结点连接形成封闭的形状
+    static GLfloat vertexData[] = {
+        +0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
+        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, -0.5, +0.0, +1.0, +0.0, +0.0,
+    };
+    
+    [self bindAttribs:vertexData];
+    glLineWidth(5);
+    glDrawArrays(GL_LINE_LOOP, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+}
+
+- (void)drawPoints {
+    static GLfloat vertexData[] = {
+        +0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
+        +0.0, +0.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, -0.5, +0.0, +1.0, +0.0, +0.0,
+    };
+    
+    [self bindAttribs:vertexData];
+    glDrawArrays(GL_POINTS, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
 }
 
 @end
