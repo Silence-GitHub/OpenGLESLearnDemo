@@ -166,7 +166,7 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     GLint model = glGetUniformLocation(self.shaderProgram, "modelMatrix");
     
     glUniformMatrix4fv(model, 1, 0, self.modelMatrix.m);
-    [self drawTriangle];
+    [self drawRectangle];
 }
 
 - (void)bindAttribs:(GLfloat *)triangleData {
@@ -178,6 +178,81 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     
     glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char *)triangleData);
     glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char *)triangleData + 3 * sizeof(GLfloat));
+}
+
+- (void)drawRectangle {
+    [self drawXPlanes];
+    [self drawYPlanes];
+    [self drawZPlanes];
+}
+
+- (void)drawXPlanes {
+    static GLfloat vertexData[] = {
+        +0.5, +0.5, +0.5, +1.0, +0.0, +0.0,
+        +0.5, +0.5, -0.5, +1.0, +0.0, +0.0,
+        +0.5, -0.5, +0.5, +1.0, +0.0, +0.0,
+        
+        +0.5, -0.5, -0.5, +1.0, +0.0, +0.0,
+        +0.5, +0.5, -0.5, +1.0, +0.0, +0.0,
+        +0.5, -0.5, +0.5, +1.0, +0.0, +0.0,
+        
+        -0.5, +0.5, +0.5, +1.0, +0.0, +0.0,
+        -0.5, +0.5, -0.5, +1.0, +0.0, +0.0,
+        -0.5, -0.5, +0.5, +1.0, +0.0, +0.0,
+        
+        -0.5, -0.5, -0.5, +1.0, +0.0, +0.0,
+        -0.5, +0.5, -0.5, +1.0, +0.0, +0.0,
+        -0.5, -0.5, +0.5, +1.0, +0.0, +0.0,
+    };
+    
+    [self bindAttribs:vertexData];
+    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+}
+
+- (void)drawYPlanes {
+    static GLfloat vertexData[] = {
+        +0.5, +0.5, +0.5, +0.0, +1.0, +0.0,
+        +0.5, +0.5, -0.5, +0.0, +1.0, +0.0,
+        -0.5, +0.5, +0.5, +0.0, +1.0, +0.0,
+        
+        -0.5, +0.5, -0.5, +0.0, +1.0, +0.0,
+        +0.5, +0.5, -0.5, +0.0, +1.0, +0.0,
+        -0.5, +0.5, +0.5, +0.0, +1.0, +0.0,
+        
+        +0.5, -0.5, +0.5, +0.0, +1.0, +0.0,
+        +0.5, -0.5, -0.5, +0.0, +1.0, +0.0,
+        -0.5, -0.5, +0.5, +0.0, +1.0, +0.0,
+        
+        -0.5, -0.5, -0.5, +0.0, +1.0, +0.0,
+        +0.5, -0.5, -0.5, +0.0, +1.0, +0.0,
+        -0.5, -0.5, +0.5, +0.0, +1.0, +0.0,
+    };
+    
+    [self bindAttribs:vertexData];
+    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+}
+
+- (void)drawZPlanes {
+    static GLfloat vertexData[] = {
+        +0.5, +0.5, +0.5, +0.0, +0.0, +1.0,
+        +0.5, -0.5, +0.5, +0.0, +0.0, +1.0,
+        -0.5, +0.5, +0.5, +0.0, +0.0, +1.0,
+        
+        -0.5, -0.5, +0.5, +0.0, +0.0, +1.0,
+        +0.5, -0.5, +0.5, +0.0, +0.0, +1.0,
+        -0.5, +0.5, +0.5, +0.0, +0.0, +1.0,
+        
+        +0.5, +0.5, -0.5, +0.0, +0.0, +1.0,
+        +0.5, -0.5, -0.5, +0.0, +0.0, +1.0,
+        -0.5, +0.5, -0.5, +0.0, +0.0, +1.0,
+        
+        -0.5, -0.5, -0.5, +0.0, +0.0, +1.0,
+        +0.5, -0.5, -0.5, +0.0, +0.0, +1.0,
+        -0.5, +0.5, -0.5, +0.0, +0.0, +1.0,
+    };
+    
+    [self bindAttribs:vertexData];
+    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
 }
 
 - (void)drawTriangle {
