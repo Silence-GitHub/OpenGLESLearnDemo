@@ -4,9 +4,12 @@ attribute vec4 color;
 varying vec4 fragColor;
 
 uniform float elapsedTime;
-uniform mat4 transform;
+uniform mat4 projectionMatrix;
+uniform mat4 cameraMatrix;
+uniform mat4 modelMatrix;
 
 void main(void) {
     fragColor = color;
-    gl_Position = transform * position;
+    mat4 mvp = projectionMatrix * cameraMatrix * modelMatrix;
+    gl_Position = mvp * position;
 }

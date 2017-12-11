@@ -13,7 +13,10 @@
 @property (nonatomic, strong) EAGLContext *context;
 @property (nonatomic, assign) GLuint shaderProgram;
 @property (nonatomic, assign) GLfloat elapsedTime;
-@property (nonatomic, assign) GLKMatrix4 transformMatrix;
+@property (nonatomic, assign) GLKMatrix4 projectionMatrix;
+@property (nonatomic, assign) GLKMatrix4 cameraMatrix;
+@property (nonatomic, assign) GLKMatrix4 modelMatrix1;
+@property (nonatomic, assign) GLKMatrix4 modelMatrix2;
 
 @end
 
@@ -36,7 +39,14 @@
     [EAGLContext setCurrentContext:_context];
     
     _elapsedTime = 0;
-    _transformMatrix = GLKMatrix4Identity;
+    
+    float aspect = CGRectGetWidth(self.view.bounds) / CGRectGetHeight(self.view.bounds);
+    _projectionMatrix = GLKMatrix4MakePerspective(M_PI_2, aspect, 0.1, 100);
+    
+    _cameraMatrix = GLKMatrix4MakeLookAt(0, 0, 2, 0, 0, 0, 0, 1, 0);
+    
+    _modelMatrix1 = GLKMatrix4Identity;
+    _modelMatrix2 = GLKMatrix4Identity;
 }
 
 - (void)setupShader {
@@ -130,27 +140,16 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
 - (void)update {
     self.elapsedTime += self.timeSinceLastUpdate;
     
-    float varyingFactor = self.elapsedTime;
-    GLKMatrix4 rotateMatrix = GLKMatrix4MakeRotation(varyingFactor, 0, 1, 0);
+    float varyingFactor = (sinf(self.elapsedTime) + 1) / 2.0;
+    self.cameraMatrix = GLKMatrix4MakeLookAt(0, 0, 2 * (varyingFactor + 1), 0, 0, 0, 0, 1, 0);
     
-    BOOL usePerspective = YES;
-    if (usePerspective) {
-        // 透视投影
-        float aspect = CGRectGetWidth(self.view.bounds) / CGRectGetHeight(self.view.bounds);
-        GLKMatrix4 perspectiveMatrix = GLKMatrix4MakePerspective(M_PI_2, aspect, 0.1, 10);
-        GLKMatrix4 translateMatrix = GLKMatrix4MakeTranslation(0, 0, -1.6);
-        self.transformMatrix = GLKMatrix4Multiply(translateMatrix, rotateMatrix);
-        self.transformMatrix = GLKMatrix4Multiply(perspectiveMatrix, self.transformMatrix);
-        
-    } else {
-        // 正交投影
-        float viewWidth = CGRectGetWidth(self.view.bounds);
-        float viewHeight = CGRectGetHeight(self.view.bounds);
-        GLKMatrix4 orthoMatrix = GLKMatrix4MakeOrtho(-viewWidth / 2, viewWidth / 2, -viewHeight / 2, viewHeight / 2, -10, 10);
-        GLKMatrix4 scaleMatrix = GLKMatrix4MakeScale(200, 200, 200);
-        self.transformMatrix = GLKMatrix4Multiply(scaleMatrix, rotateMatrix);
-        self.transformMatrix = GLKMatrix4Multiply(orthoMatrix, self.transformMatrix);
-    }
+    GLKMatrix4 translateMatrix1 = GLKMatrix4MakeTranslation(-0.7, 0, 0);
+    GLKMatrix4 rotateMatrix1 = GLKMatrix4MakeRotation(varyingFactor * M_PI * 2, 0, 1, 0);
+    self.modelMatrix1 = GLKMatrix4Multiply(translateMatrix1, rotateMatrix1);
+    
+    GLKMatrix4 translateMatrix2 = GLKMatrix4MakeTranslation(0.7, 0, 0);
+    GLKMatrix4 rotateMatrix2 = GLKMatrix4MakeRotation(varyingFactor * M_PI, 0, 0, 1);
+    self.modelMatrix2 = GLKMatrix4Multiply(translateMatrix2, rotateMatrix2);
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
@@ -162,9 +161,18 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     GLint time = glGetUniformLocation(self.shaderProgram, "elapsedTime");
     glUniform1f(time, self.elapsedTime);
     
-    GLint transform = glGetUniformLocation(self.shaderProgram, "transform");
-    glUniformMatrix4fv(transform, 1, 0, self.transformMatrix.m);
+    GLint projection = glGetUniformLocation(self.shaderProgram, "projectionMatrix");
+    glUniformMatrix4fv(projection, 1, 0, self.projectionMatrix.m);
     
+    GLint camera = glGetUniformLocation(self.shaderProgram, "cameraMatrix");
+    glUniformMatrix4fv(camera, 1, 0, self.cameraMatrix.m);
+    
+    GLint model = glGetUniformLocation(self.shaderProgram, "modelMatrix");
+    
+    glUniformMatrix4fv(model, 1, 0, self.modelMatrix1.m);
+    [self drawTriangle];
+    
+    glUniformMatrix4fv(model, 1, 0, self.modelMatrix2.m);
     [self drawTriangle];
 }
 
