@@ -130,12 +130,27 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
 - (void)update {
     self.elapsedTime += self.timeSinceLastUpdate;
     
-    float varyingFactor = sinf(self.elapsedTime);
-    GLKMatrix4 scaleMatrix = GLKMatrix4MakeScale(varyingFactor, varyingFactor, 1);
-    GLKMatrix4 rotateMatrix = GLKMatrix4MakeRotation(varyingFactor, 0, 0, 1);
-    GLKMatrix4 translateMatrix = GLKMatrix4MakeTranslation(varyingFactor, 0, 0);
-    self.transformMatrix = GLKMatrix4Multiply(translateMatrix, rotateMatrix);
-    self.transformMatrix = GLKMatrix4Multiply(self.transformMatrix, scaleMatrix);
+    float varyingFactor = self.elapsedTime;
+    GLKMatrix4 rotateMatrix = GLKMatrix4MakeRotation(varyingFactor, 0, 1, 0);
+    
+    BOOL usePerspective = YES;
+    if (usePerspective) {
+        // 透视投影
+        float aspect = CGRectGetWidth(self.view.bounds) / CGRectGetHeight(self.view.bounds);
+        GLKMatrix4 perspectiveMatrix = GLKMatrix4MakePerspective(M_PI_2, aspect, 0.1, 10);
+        GLKMatrix4 translateMatrix = GLKMatrix4MakeTranslation(0, 0, -1.6);
+        self.transformMatrix = GLKMatrix4Multiply(translateMatrix, rotateMatrix);
+        self.transformMatrix = GLKMatrix4Multiply(perspectiveMatrix, self.transformMatrix);
+        
+    } else {
+        // 正交投影
+        float viewWidth = CGRectGetWidth(self.view.bounds);
+        float viewHeight = CGRectGetHeight(self.view.bounds);
+        GLKMatrix4 orthoMatrix = GLKMatrix4MakeOrtho(-viewWidth / 2, viewWidth / 2, -viewHeight / 2, viewHeight / 2, -10, 10);
+        GLKMatrix4 scaleMatrix = GLKMatrix4MakeScale(200, 200, 200);
+        self.transformMatrix = GLKMatrix4Multiply(scaleMatrix, rotateMatrix);
+        self.transformMatrix = GLKMatrix4Multiply(orthoMatrix, self.transformMatrix);
+    }
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
@@ -166,12 +181,12 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
 
 - (void)drawTriangle {
     static GLfloat vertexData[] = {
-        +0.0, +0.5, +0.0, +1.0, +0.0, +0.0,
-        -0.5, +0.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, +0.0, +0.0, +0.0, +0.0, +1.0,
-        +0.0, -0.5, +0.0, +1.0, +0.0, +0.0,
-        -0.5, +0.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, +0.0, +0.0, +0.0, +0.0, +1.0,
+        -0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
+        -0.5, -0.5, +0.0, +0.0, +1.0, +0.0,
+        +0.5, -0.5, +0.0, +0.0, +0.0, +1.0,
+        +0.5, -0.5, +0.0, +0.0, +0.0, +1.0,
+        +0.5, +0.5, +0.0, +0.0, +1.0, +0.0,
+        -0.5, +0.5, +0.0, +1.0, +0.0, +0.0,
     };
     
     [self bindAttribs:vertexData];
