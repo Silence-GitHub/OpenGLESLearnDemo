@@ -164,8 +164,8 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     glUniformMatrix4fv(camera, 1, 0, self.cameraMatrix.m);
     
     GLint model = glGetUniformLocation(self.shaderProgram, "modelMatrix");
-    
     glUniformMatrix4fv(model, 1, 0, self.modelMatrix.m);
+    
     [self drawRectangle];
 }
 
