@@ -17,6 +17,8 @@
 @property (nonatomic, assign) GLKMatrix4 cameraMatrix;
 @property (nonatomic, assign) GLKMatrix4 modelMatrix;
 @property (nonatomic, assign) GLKVector3 lightDirection;
+@property (nonatomic, strong) GLKTextureInfo *diffuseTexture;
+@property (nonatomic, assign) GLuint diffuseTextureWithGLCommands;
 
 @end
 
@@ -27,6 +29,8 @@
     
     [self setupContext];
     [self setupShader];
+    [self genTexture];
+    [self genTextureWithGLCommands];
 }
 
 - (void)setupContext {
@@ -142,6 +146,45 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     return true;
 }
 
+- (void)genTexture {
+    NSString *path = [NSBundle.mainBundle pathForResource:@"texture" ofType:@"jpg"];
+    _diffuseTexture = [GLKTextureLoader textureWithContentsOfFile:path options:nil error:NULL];
+}
+
+- (void)genTextureWithGLCommands {
+    UIImage *image = [UIImage imageNamed:@"texture.jpg"];
+    CGImageRef cgimage = image.CGImage;
+    size_t width = CGImageGetWidth(cgimage);
+    size_t height = CGImageGetHeight(cgimage);
+    
+    GLubyte *textureData = (GLubyte *)malloc(width * height * 4);
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    size_t bitsPerComponent = 8;
+    size_t bytesPerRow = width * 4;
+    CGContextRef context = CGBitmapContextCreate(textureData,
+                                                 width,
+                                                 height,
+                                                 bitsPerComponent,
+                                                 bytesPerRow,
+                                                 colorSpace,
+                                                 kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    CGContextDrawImage(context, CGRectMake(0, 0, width, height), cgimage);
+    CGColorSpaceRelease(colorSpace);
+    CGContextRelease(context);
+    
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    _diffuseTextureWithGLCommands = texture;
+}
+
 - (void)update {
     self.elapsedTime += self.timeSinceLastUpdate;
     
@@ -179,6 +222,11 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     GLint light = glGetUniformLocation(self.shaderProgram, "lightDirection");
     glUniform3fv(light, 1, self.lightDirection.v);
     
+    GLint diffuse = glGetUniformLocation(self.shaderProgram, "diffuseMap");
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, self.diffuseTexture.name);
+    glUniform1i(diffuse, 0);
+    
     [self drawRectangle];
 }
 
@@ -189,8 +237,12 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     GLint color = glGetAttribLocation(self.shaderProgram, "normal");
     glEnableVertexAttribArray(color);
     
-    glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char *)triangleData);
-    glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (char *)triangleData + 3 * sizeof(GLfloat));
+    GLint uv = glGetAttribLocation(self.shaderProgram, "uv");
+    glEnableVertexAttribArray(uv);
+    
+    glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (char *)triangleData);
+    glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (char *)triangleData + 3 * sizeof(GLfloat));
+    glVertexAttribPointer(uv, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (char *)triangleData + 6 * sizeof(GLfloat));
 }
 
 - (void)drawRectangle {
@@ -201,71 +253,71 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
 
 - (void)drawXPlanes {
     static GLfloat vertexData[] = {
-        +0.5, +0.5, +0.5, +1.0, +0.0, +0.0,
-        +0.5, +0.5, -0.5, +1.0, +0.0, +0.0,
-        +0.5, -0.5, +0.5, +1.0, +0.0, +0.0,
+        +0.5, +0.5, +0.5, +1.0, +0.0, +0.0, +1.0, +1.0,
+        +0.5, +0.5, -0.5, +1.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, -0.5, +0.5, +1.0, +0.0, +0.0, +0.0, +1.0,
         
-        +0.5, -0.5, -0.5, +1.0, +0.0, +0.0,
-        +0.5, +0.5, -0.5, +1.0, +0.0, +0.0,
-        +0.5, -0.5, +0.5, +1.0, +0.0, +0.0,
+        +0.5, -0.5, -0.5, +1.0, +0.0, +0.0, +0.0, +0.0,
+        +0.5, +0.5, -0.5, +1.0, +0.0, +0.0, +1.0, +0.0,
+        +0.5, -0.5, +0.5, +1.0, +0.0, +0.0, +0.0, +1.0,
         
-        -0.5, +0.5, +0.5, -1.0, +0.0, +0.0,
-        -0.5, +0.5, -0.5, -1.0, +0.0, +0.0,
-        -0.5, -0.5, +0.5, -1.0, +0.0, +0.0,
+        -0.5, +0.5, +0.5, -1.0, +0.0, +0.0, +1.0, +1.0,
+        -0.5, +0.5, -0.5, -1.0, +0.0, +0.0, +1.0, +0.0,
+        -0.5, -0.5, +0.5, -1.0, +0.0, +0.0, +0.0, +1.0,
         
-        -0.5, -0.5, -0.5, -1.0, +0.0, +0.0,
-        -0.5, +0.5, -0.5, -1.0, +0.0, +0.0,
-        -0.5, -0.5, +0.5, -1.0, +0.0, +0.0,
+        -0.5, -0.5, -0.5, -1.0, +0.0, +0.0, +0.0, +0.0,
+        -0.5, +0.5, -0.5, -1.0, +0.0, +0.0, +1.0, +0.0,
+        -0.5, -0.5, +0.5, -1.0, +0.0, +0.0, +0.0, +1.0,
     };
     
     [self bindAttribs:vertexData];
-    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 8));
 }
 
 - (void)drawYPlanes {
     static GLfloat vertexData[] = {
-        +0.5, +0.5, +0.5, +0.0, +1.0, +0.0,
-        +0.5, +0.5, -0.5, +0.0, +1.0, +0.0,
-        -0.5, +0.5, +0.5, +0.0, +1.0, +0.0,
+        +0.5, +0.5, +0.5, +0.0, +1.0, +0.0, +1.0, +1.0,
+        +0.5, +0.5, -0.5, +0.0, +1.0, +0.0, +1.0, +0.0,
+        -0.5, +0.5, +0.5, +0.0, +1.0, +0.0, +0.0, +1.0,
         
-        -0.5, +0.5, -0.5, +0.0, +1.0, +0.0,
-        +0.5, +0.5, -0.5, +0.0, +1.0, +0.0,
-        -0.5, +0.5, +0.5, +0.0, +1.0, +0.0,
+        -0.5, +0.5, -0.5, +0.0, +1.0, +0.0, +0.0, +0.0,
+        +0.5, +0.5, -0.5, +0.0, +1.0, +0.0, +1.0, +0.0,
+        -0.5, +0.5, +0.5, +0.0, +1.0, +0.0, +0.0, +1.0,
         
-        +0.5, -0.5, +0.5, +0.0, -1.0, +0.0,
-        +0.5, -0.5, -0.5, +0.0, -1.0, +0.0,
-        -0.5, -0.5, +0.5, +0.0, -1.0, +0.0,
+        +0.5, -0.5, +0.5, +0.0, -1.0, +0.0, +1.0, +1.0,
+        +0.5, -0.5, -0.5, +0.0, -1.0, +0.0, +1.0, +0.0,
+        -0.5, -0.5, +0.5, +0.0, -1.0, +0.0, +0.0, +1.0,
         
-        -0.5, -0.5, -0.5, +0.0, -1.0, +0.0,
-        +0.5, -0.5, -0.5, +0.0, -1.0, +0.0,
-        -0.5, -0.5, +0.5, +0.0, -1.0, +0.0,
+        -0.5, -0.5, -0.5, +0.0, -1.0, +0.0, +0.0, +0.0,
+        +0.5, -0.5, -0.5, +0.0, -1.0, +0.0, +1.0, +0.0,
+        -0.5, -0.5, +0.5, +0.0, -1.0, +0.0, +0.0, +1.0,
     };
     
     [self bindAttribs:vertexData];
-    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 8));
 }
 
 - (void)drawZPlanes {
     static GLfloat vertexData[] = {
-        +0.5, +0.5, +0.5, +0.0, +0.0, +1.0,
-        +0.5, -0.5, +0.5, +0.0, +0.0, +1.0,
-        -0.5, +0.5, +0.5, +0.0, +0.0, +1.0,
+        +0.5, +0.5, +0.5, +0.0, +0.0, +1.0, +1.0, +1.0,
+        +0.5, -0.5, +0.5, +0.0, +0.0, +1.0, +1.0, +0.0,
+        -0.5, +0.5, +0.5, +0.0, +0.0, +1.0, +0.0, +1.0,
         
-        -0.5, -0.5, +0.5, +0.0, +0.0, +1.0,
-        +0.5, -0.5, +0.5, +0.0, +0.0, +1.0,
-        -0.5, +0.5, +0.5, +0.0, +0.0, +1.0,
+        -0.5, -0.5, +0.5, +0.0, +0.0, +1.0, +0.0, +0.0,
+        +0.5, -0.5, +0.5, +0.0, +0.0, +1.0, +1.0, +0.0,
+        -0.5, +0.5, +0.5, +0.0, +0.0, +1.0, +0.0, +1.0,
         
-        +0.5, +0.5, -0.5, +0.0, +0.0, -1.0,
-        +0.5, -0.5, -0.5, +0.0, +0.0, -1.0,
-        -0.5, +0.5, -0.5, +0.0, +0.0, -1.0,
+        +0.5, +0.5, -0.5, +0.0, +0.0, -1.0, +1.0, +1.0,
+        +0.5, -0.5, -0.5, +0.0, +0.0, -1.0, +1.0, +0.0,
+        -0.5, +0.5, -0.5, +0.0, +0.0, -1.0, +0.0, +1.0,
         
-        -0.5, -0.5, -0.5, +0.0, +0.0, -1.0,
-        +0.5, -0.5, -0.5, +0.0, +0.0, -1.0,
-        -0.5, +0.5, -0.5, +0.0, +0.0, -1.0,
+        -0.5, -0.5, -0.5, +0.0, +0.0, -1.0, +0.0, +0.0,
+        +0.5, -0.5, -0.5, +0.0, +0.0, -1.0, +1.0, +0.0,
+        -0.5, +0.5, -0.5, +0.0, +0.0, -1.0, +0.0, +1.0,
     };
     
     [self bindAttribs:vertexData];
-    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 6));
+    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 8));
 }
 
 @end

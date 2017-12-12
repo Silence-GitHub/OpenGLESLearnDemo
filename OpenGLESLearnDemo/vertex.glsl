@@ -1,7 +1,9 @@
 attribute vec4 position;
 attribute vec3 normal;
+attribute vec2 uv;
 
 varying vec3 fragNormal;
+varying vec2 fragUV;
 
 uniform float elapsedTime;
 uniform mat4 projectionMatrix;
@@ -10,6 +12,7 @@ uniform mat4 modelMatrix;
 
 void main(void) {
     fragNormal = normal;
+    fragUV = uv;
     mat4 mvp = projectionMatrix * cameraMatrix * modelMatrix;
     gl_Position = mvp * position;
 }
