@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4A18ADE71FE2A59400451C10 /* red.png in Resources */ = {isa = PBXBuildFile; fileRef = 4A18ADE51FE2A59400451C10 /* red.png */; };
+		4A18ADE81FE2A59400451C10 /* green.png in Resources */ = {isa = PBXBuildFile; fileRef = 4A18ADE61FE2A59400451C10 /* green.png */; };
 		4A6DC8841FDF77A700D1E2CA /* texture.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4A6DC8831FDF77A700D1E2CA /* texture.jpg */; };
 		4A7175CF1FCD51A10016D839 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4A7175CE1FCD51A10016D839 /* AppDelegate.m */; };
 		4A7175D21FCD51A10016D839 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4A7175D11FCD51A10016D839 /* ViewController.m */; };
@@ -38,6 +40,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		4A18ADE51FE2A59400451C10 /* red.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = red.png; sourceTree = "<group>"; };
+		4A18ADE61FE2A59400451C10 /* green.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = green.png; sourceTree = "<group>"; };
 		4A6DC8831FDF77A700D1E2CA /* texture.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = texture.jpg; sourceTree = "<group>"; };
 		4A7175CA1FCD51A10016D839 /* OpenGLESLearnDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenGLESLearnDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A7175CD1FCD51A10016D839 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -108,6 +112,8 @@
 			isa = PBXGroup;
 			children = (
 				4A6DC8831FDF77A700D1E2CA /* texture.jpg */,
+				4A18ADE61FE2A59400451C10 /* green.png */,
+				4A18ADE51FE2A59400451C10 /* red.png */,
 				4A7176091FCE55920016D839 /* vertex.glsl */,
 				4A7176071FCE54B00016D839 /* fragment.glsl */,
 				4A7175CD1FCD51A10016D839 /* AppDelegate.h */,
@@ -251,6 +257,8 @@
 				4A7176031FCE4ED40016D839 /* Main.storyboard in Resources */,
 				4A7175DA1FCD51A10016D839 /* LaunchScreen.storyboard in Resources */,
 				4A6DC8841FDF77A700D1E2CA /* texture.jpg in Resources */,
+				4A18ADE71FE2A59400451C10 /* red.png in Resources */,
+				4A18ADE81FE2A59400451C10 /* green.png in Resources */,
 				4A7175D71FCD51A10016D839 /* Assets.xcassets in Resources */,
 				4A71760A1FCE55920016D839 /* vertex.glsl in Resources */,
 			);

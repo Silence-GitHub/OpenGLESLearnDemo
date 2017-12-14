@@ -17,8 +17,9 @@
 @property (nonatomic, assign) GLKMatrix4 cameraMatrix;
 @property (nonatomic, assign) GLKMatrix4 modelMatrix;
 @property (nonatomic, assign) GLKVector3 lightDirection;
-@property (nonatomic, strong) GLKTextureInfo *diffuseTexture;
-@property (nonatomic, assign) GLuint diffuseTextureWithGLCommands;
+@property (nonatomic, strong) GLKTextureInfo *opaqueTexture;
+@property (nonatomic, strong) GLKTextureInfo *redTransparencyTexture;
+@property (nonatomic, strong) GLKTextureInfo *greenTransparencyTexture;
 
 @end
 
@@ -30,7 +31,6 @@
     [self setupContext];
     [self setupShader];
     [self genTexture];
-    [self genTextureWithGLCommands];
 }
 
 - (void)setupContext {
@@ -45,6 +45,8 @@
     [EAGLContext setCurrentContext:_context];
     
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     _elapsedTime = 0;
     
@@ -55,7 +57,7 @@
     
     _modelMatrix = GLKMatrix4Identity;
     
-    _lightDirection = GLKVector3Make(0, -1, 0);
+    _lightDirection = GLKVector3Make(0, -1, -1);
 }
 
 - (void)setupShader {
@@ -147,42 +149,14 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
 }
 
 - (void)genTexture {
-    NSString *path = [NSBundle.mainBundle pathForResource:@"texture" ofType:@"jpg"];
-    _diffuseTexture = [GLKTextureLoader textureWithContentsOfFile:path options:nil error:NULL];
-}
-
-- (void)genTextureWithGLCommands {
-    UIImage *image = [UIImage imageNamed:@"texture.jpg"];
-    CGImageRef cgimage = image.CGImage;
-    size_t width = CGImageGetWidth(cgimage);
-    size_t height = CGImageGetHeight(cgimage);
+    NSString *opaquePath = [NSBundle.mainBundle pathForResource:@"texture" ofType:@"jpg"];
+    _opaqueTexture = [GLKTextureLoader textureWithContentsOfFile:opaquePath options:nil error:NULL];
     
-    GLubyte *textureData = (GLubyte *)malloc(width * height * 4);
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    size_t bitsPerComponent = 8;
-    size_t bytesPerRow = width * 4;
-    CGContextRef context = CGBitmapContextCreate(textureData,
-                                                 width,
-                                                 height,
-                                                 bitsPerComponent,
-                                                 bytesPerRow,
-                                                 colorSpace,
-                                                 kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
-    CGContextDrawImage(context, CGRectMake(0, 0, width, height), cgimage);
-    CGColorSpaceRelease(colorSpace);
-    CGContextRelease(context);
+    NSString *redPath = [NSBundle.mainBundle pathForResource:@"red" ofType:@"png"];
+    _redTransparencyTexture = [GLKTextureLoader textureWithContentsOfFile:redPath options:nil error:NULL];
     
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    
-    _diffuseTextureWithGLCommands = texture;
+    NSString *greenPath = [NSBundle.mainBundle pathForResource:@"green" ofType:@"png"];
+    _greenTransparencyTexture = [GLKTextureLoader textureWithContentsOfFile:greenPath options:nil error:NULL];
 }
 
 - (void)update {
@@ -190,8 +164,6 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     
     float varyingFactor = (sinf(self.elapsedTime) + 1) / 2.0;
     self.cameraMatrix = GLKMatrix4MakeLookAt(0, 0, 2 * (varyingFactor + 1), 0, 0, 0, 0, 1, 0);
-    
-    self.modelMatrix = GLKMatrix4MakeRotation(varyingFactor * M_PI * 2, 1, 1, 0);
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect {
@@ -209,22 +181,32 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
     GLint camera = glGetUniformLocation(self.shaderProgram, "cameraMatrix");
     glUniformMatrix4fv(camera, 1, 0, self.cameraMatrix.m);
     
+    GLint light = glGetUniformLocation(self.shaderProgram, "lightDirection");
+    glUniform3fv(light, 1, self.lightDirection.v);
+    
+    [self drawPlaneAt:GLKVector3Make(0, 0, -0.3) texture:self.opaqueTexture];
+    
+    glDepthMask(0);
+    [self drawPlaneAt:GLKVector3Make(-0.2, 0.3, -0.5) texture:self.redTransparencyTexture];
+    [self drawPlaneAt:GLKVector3Make(0.2, 0.2, 0) texture:self.greenTransparencyTexture];
+    glDepthMask(1);
+}
+
+- (void)drawPlaneAt:(GLKVector3)position texture:(GLKTextureInfo *)texture {
+    _modelMatrix = GLKMatrix4MakeTranslation(position.x, position.y, position.z);
     GLint model = glGetUniformLocation(self.shaderProgram, "modelMatrix");
-    glUniformMatrix4fv(model, 1, 0, self.modelMatrix.m);
+    glUniformMatrix4fv(model, 1, 0, _modelMatrix.m);
     
     bool canInvert;
-    GLKMatrix4 normalMatrix = GLKMatrix4InvertAndTranspose(self.modelMatrix, &canInvert);
+    GLKMatrix4 normalMatrix = GLKMatrix4InvertAndTranspose(_modelMatrix, &canInvert);
     if (canInvert) {
         GLint normal = glGetUniformLocation(self.shaderProgram, "normalMatrix");
         glUniformMatrix4fv(normal, 1, 0, normalMatrix.m);
     }
     
-    GLint light = glGetUniformLocation(self.shaderProgram, "lightDirection");
-    glUniform3fv(light, 1, self.lightDirection.v);
-    
     GLint diffuse = glGetUniformLocation(self.shaderProgram, "diffuseMap");
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, self.diffuseTexture.name);
+    glBindTexture(GL_TEXTURE_2D, texture.name);
     glUniform1i(diffuse, 0);
     
     [self drawRectangle];
@@ -246,74 +228,13 @@ bool compileShader(GLuint *shader, GLenum type, const GLchar *source) {
 }
 
 - (void)drawRectangle {
-    [self drawXPlanes];
-    [self drawYPlanes];
-    [self drawZPlanes];
-}
-
-- (void)drawXPlanes {
     static GLfloat vertexData[] = {
-        +0.5, +0.5, +0.5, +1.0, +0.0, +0.0, +1.0, +1.0,
-        +0.5, +0.5, -0.5, +1.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, -0.5, +0.5, +1.0, +0.0, +0.0, +0.0, +1.0,
-        
-        +0.5, -0.5, -0.5, +1.0, +0.0, +0.0, +0.0, +0.0,
-        +0.5, +0.5, -0.5, +1.0, +0.0, +0.0, +1.0, +0.0,
-        +0.5, -0.5, +0.5, +1.0, +0.0, +0.0, +0.0, +1.0,
-        
-        -0.5, +0.5, +0.5, -1.0, +0.0, +0.0, +1.0, +1.0,
-        -0.5, +0.5, -0.5, -1.0, +0.0, +0.0, +1.0, +0.0,
-        -0.5, -0.5, +0.5, -1.0, +0.0, +0.0, +0.0, +1.0,
-        
-        -0.5, -0.5, -0.5, -1.0, +0.0, +0.0, +0.0, +0.0,
-        -0.5, +0.5, -0.5, -1.0, +0.0, +0.0, +1.0, +0.0,
-        -0.5, -0.5, +0.5, -1.0, +0.0, +0.0, +0.0, +1.0,
-    };
-    
-    [self bindAttribs:vertexData];
-    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 8));
-}
-
-- (void)drawYPlanes {
-    static GLfloat vertexData[] = {
-        +0.5, +0.5, +0.5, +0.0, +1.0, +0.0, +1.0, +1.0,
-        +0.5, +0.5, -0.5, +0.0, +1.0, +0.0, +1.0, +0.0,
-        -0.5, +0.5, +0.5, +0.0, +1.0, +0.0, +0.0, +1.0,
-        
-        -0.5, +0.5, -0.5, +0.0, +1.0, +0.0, +0.0, +0.0,
-        +0.5, +0.5, -0.5, +0.0, +1.0, +0.0, +1.0, +0.0,
-        -0.5, +0.5, +0.5, +0.0, +1.0, +0.0, +0.0, +1.0,
-        
-        +0.5, -0.5, +0.5, +0.0, -1.0, +0.0, +1.0, +1.0,
-        +0.5, -0.5, -0.5, +0.0, -1.0, +0.0, +1.0, +0.0,
-        -0.5, -0.5, +0.5, +0.0, -1.0, +0.0, +0.0, +1.0,
-        
-        -0.5, -0.5, -0.5, +0.0, -1.0, +0.0, +0.0, +0.0,
-        +0.5, -0.5, -0.5, +0.0, -1.0, +0.0, +1.0, +0.0,
-        -0.5, -0.5, +0.5, +0.0, -1.0, +0.0, +0.0, +1.0,
-    };
-    
-    [self bindAttribs:vertexData];
-    glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / (sizeof(GLfloat) * 8));
-}
-
-- (void)drawZPlanes {
-    static GLfloat vertexData[] = {
-        +0.5, +0.5, +0.5, +0.0, +0.0, +1.0, +1.0, +1.0,
-        +0.5, -0.5, +0.5, +0.0, +0.0, +1.0, +1.0, +0.0,
-        -0.5, +0.5, +0.5, +0.0, +0.0, +1.0, +0.0, +1.0,
-        
-        -0.5, -0.5, +0.5, +0.0, +0.0, +1.0, +0.0, +0.0,
-        +0.5, -0.5, +0.5, +0.0, +0.0, +1.0, +1.0, +0.0,
-        -0.5, +0.5, +0.5, +0.0, +0.0, +1.0, +0.0, +1.0,
-        
-        +0.5, +0.5, -0.5, +0.0, +0.0, -1.0, +1.0, +1.0,
-        +0.5, -0.5, -0.5, +0.0, +0.0, -1.0, +1.0, +0.0,
-        -0.5, +0.5, -0.5, +0.0, +0.0, -1.0, +0.0, +1.0,
-        
-        -0.5, -0.5, -0.5, +0.0, +0.0, -1.0, +0.0, +0.0,
-        +0.5, -0.5, -0.5, +0.0, +0.0, -1.0, +1.0, +0.0,
-        -0.5, +0.5, -0.5, +0.0, +0.0, -1.0, +0.0, +1.0,
+        -0.5, +0.5, +0.0, +0.0, +0.0, +1.0, +0.0, +0.0,
+        -0.5, -0.5, +0.0, +0.0, +0.0, +1.0, +0.0, +1.0,
+        +0.5, -0.5, +0.0, +0.0, +0.0, +1.0, +1.0, +1.0,
+        +0.5, +0.5, +0.0, +0.0, +0.0, +1.0, +1.0, +0.0,
+        -0.5, +0.5, +0.0, +0.0, +0.0, +1.0, +0.0, +0.0,
+        +0.5, -0.5, +0.0, +0.0, +0.0, +1.0, +1.0, +1.0,
     };
     
     [self bindAttribs:vertexData];
